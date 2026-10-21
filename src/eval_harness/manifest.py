@@ -98,3 +98,56 @@ def load_tasks(manifest_path: Path) -> list[Task]:
         )
 
     return tasks
+
+def load_submissions(manifest_path: Path) -> dict[str, Path]:
+    """Load and validate submission records from a JSON manifest."""
+    submissions: dict[str, Path] = {}
+
+    for line_number, raw_line in enumerate(
+        manifest_path.read_text(encoding="utf-8").splitlines(),
+        start=1,
+    ):
+        if not raw_line.strip():
+            continue
+
+        try:
+            record = json.loads(raw_line)
+        except json.JSONDecodeError as error:
+            raise ManifestError(
+                f"Line {line_number}: invalid JSON."
+            ) from error
+
+        if not isinstance(record, dict):
+            raise ManifestError(
+                f"Line {line_number}: each submission must be a JSON object."
+            )
+
+        required_fields = {"task_id", "source_path"}
+        missing_fields = required_fields - record.keys()
+        if missing_fields:
+            raise ManifestError(
+                f"Line {line_number}: missing fields {sorted(missing_fields)}."
+            )
+
+        task_id = str(record["task_id"])
+        if not task_id:
+            raise ManifestError(
+                f"Line {line_number}: task_id cannot be empty."
+            )
+
+        if task_id in submissions:
+            raise ManifestError(
+                f"Duplicate submission for task id: {task_id}."
+            )
+
+        source_path = (
+            manifest_path.parent / str(record["source_path"])
+        ).resolve()
+        if not source_path.is_file():
+            raise ManifestError(
+                f"Submission for {task_id}: source file does not exist: {source_path}"
+            )
+
+        submissions[task_id] = source_path
+        
+    return submissions

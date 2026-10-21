@@ -3,7 +3,11 @@ import tempfile
 from pathlib import Path
 import unittest
 
-from eval_harness.manifest import ManifestError, load_tasks
+from eval_harness.manifest import (
+    ManifestError, 
+    load_submissions,
+    load_tasks,
+)
 
 
 class TaskManifestTests(unittest.TestCase):
@@ -47,6 +51,60 @@ class TaskManifestTests(unittest.TestCase):
 
             with self.assertRaises(ManifestError):
                 load_tasks(manifest)
+
+    def write_submissions(self, root: Path, rows: list[dict]) -> Path:
+        submissions_dir = root / "submissions"
+        submissions_dir.mkdir()
+        manifest = submissions_dir / "submissions.jsonl"
+        manifest.write_text(
+            "\n".join(json.dumps(row) for row in rows) + "\n",
+            encoding="utf-8",
+        )
+        return manifest
+
+
+    def valid_submission(self) -> dict:
+        return {
+            "task_id": "sum-list",
+            "source_path": "../candidate.py",
+        }
+
+
+    def test_loads_a_valid_submission(self):
+        with tempfile.TemporaryDirectory() as temporary_directory:
+            root = Path(temporary_directory)
+            (root / "candidate.py").write_text(
+                'def add(values):\n    return sum(values)\n',
+                encoding="utf-8",
+            )
+            manifest = self.write_submissions(
+                root,
+                [self.valid_submission()],
+            )
+
+            submissions = load_submissions(manifest)
+
+        self.assertEqual(
+            submissions["sum-list"],
+            (root / "candidate.py").resolve(),
+        )
+
+
+    def test_rejects_duplicate_submission_task_ids(self):
+        with tempfile.TemporaryDirectory() as temporary_directory:
+            root = Path(temporary_directory)
+            (root / "candidate.py").write_text(
+                "print('hello')\n",
+                encoding="utf-8",
+            )
+            submission = self.valid_submission()
+            manifest = self.write_submissions(
+                root,
+                [submission, submission],
+            )
+
+            with self.assertRaises(ManifestError):
+                load_submissions(manifest)
 
 
 if __name__ == "__main__":
