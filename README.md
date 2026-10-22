@@ -1,5 +1,6 @@
-
 # Coding Evaluation Harness
+
+`[![Test suite](https://github.com/Yonasnegash/coding-eval-harness/actions/workflows/tests.yml/badge.svg)](https://github.com/Yonasnegash/coding-eval-harness/actions/workflows/tests.yml)`
 
 A small Python tool for running coding evaluations in a consistent, repeatable way.
 
