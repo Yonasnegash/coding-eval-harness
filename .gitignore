@@ -1,3 +1,6 @@
 .venv/
 __pycache__/
 *.py[cod]
+.evaluation-runs/
+outputs/
+src/coding_eval_harness.egg-info
