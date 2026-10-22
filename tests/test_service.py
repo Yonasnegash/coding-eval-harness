@@ -129,6 +129,33 @@ class EvaluationServiceTests(unittest.TestCase):
             self.assertIn("FAIL", result["evidence"]["stdout"])
             self.assertIn("AssertionError", result["evidence"]["stderr"])
 
+    def test_reports_missing_submission_without_running_tests(self):
+        with tempfile.TemporaryDirectory() as temporary_directory:
+            root = Path(temporary_directory)
+            tasks_manifest, submissions_manifest = (
+                self.create_evaluation_manifests(root)
+            )
+            submissions_manifest.write_text("", encoding="utf-8")
+
+            runner = PassingRunner()
+            report = evaluate(
+                tasks_manifest,
+                submissions_manifest,
+                runner,
+                root / "evaluation-runs",
+            )
+
+            result = report["results"][0]
+
+            self.assertEqual(result["status"], "not_submitted")
+            self.assertEqual(result["score"]["points_awarded"], 0)
+            self.assertEqual(result["score"]["possible_points"], 100)
+            self.assertEqual(
+                result["evidence"]["reason"],
+                "No submission was supplied for this task.",
+            )
+            self.assertFalse(hasattr(runner, "workspace"))
+
 
 if __name__ == "__main__":
     unittest.main()
